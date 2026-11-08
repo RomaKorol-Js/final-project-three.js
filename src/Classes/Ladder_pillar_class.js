@@ -11,7 +11,7 @@ export class Pillars_ladder extends THREE.Group {
     });
 
     const Pillar_base = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.025, 0.025, 0.15, 8),
+      new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8),
       Pliar_base_materials,
     );
     Pillar_base.position.set(0, -0.1, 0);
@@ -23,8 +23,8 @@ export class Pillars_ladder extends THREE.Group {
     Pillar_base.renderOrder = 0;
     Pillar_top.renderOrder = 1;
     Pillar_top.rotateZ(133.5);
-    Pillar_base.position.y = -0.175;
-    Pillar_top.position.y = -0.1;
+    Pillar_base.position.y = -0.1;
+    Pillar_top.position.y = 0.05;
     this.add(Pillar_base, Pillar_top);
   }
 }

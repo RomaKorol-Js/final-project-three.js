@@ -1,8 +1,9 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import CANNON from "cannon";
 import { Pillars_ladder } from "./Classes/Ladder_pillar_class";
 import { Frame } from "./Classes/Frame_class";
 import { Add_Ladders } from "./Function/AddLeaders_func";
+import { createWalkControls } from "./Function/Control_func";
 import { Ladder_basement_carpeted_floor } from "./Classes/Ladder_basement_carpeted_floor";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
@@ -13,30 +14,29 @@ const sizes = {
   height: window.innerHeight,
 };
 
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
+export const camera = new THREE.PerspectiveCamera(
+  75,
+  sizes.width / sizes.height,
+);
 
-camera.position.x = 0;
-camera.position.y = 1.33;
-camera.position.z = 2;
-camera.lookAt(0, 0, 0);
+camera.position.set(0, 0.95, 1.3);
+// camera.lookAt(0, 0, 0);
 
 scene.add(camera);
 
 const canvas = document.querySelector("canvas.webgl");
 
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
 const render = new THREE.WebGLRenderer({
   canvas: canvas,
 });
+render.shadowMap.enabled = true;
+render.shadowMap.type = THREE.PCFShadowMap;
 
 //Light
 
 const lampLight = new THREE.PointLight("#FFF4C9", 7.5, 7.5);
 lampLight.position.set(0.95, 1, -1.4);
 scene.add(lampLight);
-
-// scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.25));
 
 const light = new THREE.DirectionalLight(0xffffff, 1.75);
 light.position.set(2, 5, 3);
@@ -54,13 +54,13 @@ floorShape.lineTo(2.5, 2);
 floorShape.lineTo(-2.5, 2);
 floorShape.closePath();
 
-const squareHole = new THREE.Path();
-squareHole.moveTo(-1.45, 0.15);
-squareHole.lineTo(-1.45, 1.5);
-squareHole.lineTo(0.75, 1.5);
-squareHole.lineTo(0.75, 0.15);
+const floorHole = new THREE.Path();
+floorHole.moveTo(-1.45, 0.15);
+floorHole.lineTo(-1.45, 1.5);
+floorHole.lineTo(0.75, 1.5);
+floorHole.lineTo(0.75, 0.15);
 
-floorShape.holes.push(squareHole);
+floorShape.holes.push(floorHole);
 
 const floorGeometry = new THREE.ShapeGeometry(floorShape);
 
@@ -75,7 +75,7 @@ floorColorTexture.repeat.set(2, 2);
 
 const floorMaterial = new THREE.MeshStandardMaterial({
   map: floorColorTexture,
-  // side: THREE.DoubleSide, //
+  side: THREE.DoubleSide,
   color: 0xf5c0c8,
 });
 
@@ -240,7 +240,7 @@ const basement_wall_under_ladder_geometry = new THREE.ExtrudeGeometry(
 
 const basement_wall_under_ladder = new THREE.Mesh(
   basement_wall_under_ladder_geometry,
-  new THREE.MeshLambertMaterial({ color: 0x000000 }),
+  new THREE.MeshLambertMaterial({ color: 0xf3eac6 }), // why its dont have colour
 );
 basement_wall_under_ladder.position.set(-0.1, -0.725, -0.825);
 
@@ -272,67 +272,38 @@ Basment_fundament.add(
 
 scene.add(Basment_fundament);
 // Shadows
+
+const enableShadows = (root) => {
+  root.traverse((object) => {
+    if (!object.isMesh) return;
+
+    object.castShadow = true;
+    object.receiveShadow = true;
+  });
+};
+
 room_1_fundament.traverse((object) => {
   if (!object.isMesh) return;
-  object.castShadow = true;
-  object.receiveShadow = true;
+  enableShadows(object);
 });
 
 floor.receiveShadow = true;
 
 Basment_fundament.traverse((object) => {
   if (!object.isMesh) return;
-  object.castShadow = true;
-  object.receiveShadow = true;
+  enableShadows(object);
 });
 //3d modules
 const Base_Url = `${import.meta.env.BASE_URL}`;
 
 const Url_Array = [
   `${Base_Url}Models/Vase_2/scene.gltf`,
-  // `${Base_Url}Models/Vase/scene.gltf`,
   `${Base_Url}Models/Lamp/scene.gltf`,
   `${Base_Url}Models/Bookshelf/Bookshelf.gltf`,
   `${Base_Url}Models/Table/scene.gltf`,
 ];
 
 const gltfLoader = new GLTFLoader();
-
-// gltfLoader.load(Url_Array[0], (gltf) => {
-//   const vase = gltf.scene;
-//   vase.scale.set(2.0, 2.0, 2.0);
-
-//   vase.traverse((object) => {
-//     if (!object.isMesh) return;
-
-//     const originalMaterials = Array.isArray(object.material)
-//       ? object.material
-//       : [object.material];
-
-//     const stylizedMaterials = originalMaterials.map((material) => {
-//       const color =
-//         material.name === "Double"
-//           ? // 0xc8a832 : 0x526b3f;
-//             0xdbb100
-//           : 0x647c00;
-
-//       return new THREE.MeshLambertMaterial({
-//         color,
-//         flatShading: true,
-//         side: THREE.DoubleSide,
-//       });
-//     });
-
-//     object.material = Array.isArray(object.material)
-//       ? stylizedMaterials
-//       : stylizedMaterials[0];
-//   });
-
-//   vase.position.set(-1.75, 0.3, -1.2);
-//   vase.rotateY(THREE.MathUtils.degToRad(180));
-
-//   scene.add(vase);
-// });
 
 gltfLoader.load(Url_Array[1], (gltf) => {
   const lamp = gltf.scene;
@@ -363,11 +334,11 @@ gltfLoader.load(Url_Array[1], (gltf) => {
   lamp.rotateY(THREE.MathUtils.degToRad(180));
 
   scene.add(lamp);
+  addMeshColliders(lamp, wallPhysicsMaterial);
 });
 const applyFlatColor = (model, color) => {
   model.traverse((object) => {
     if (!object.isMesh) return;
-
     object.material = new THREE.MeshLambertMaterial({ color });
   });
 };
@@ -378,7 +349,9 @@ gltfLoader.load(Url_Array[2], (gltf) => {
   bookshelf.position.set(1.35, -0.35, -1.05);
   bookshelf.rotateY(THREE.MathUtils.degToRad(0));
 
+  enableShadows(bookshelf);
   scene.add(bookshelf);
+  addMeshColliders(bookshelf, wallPhysicsMaterial);
 });
 
 gltfLoader.load(Url_Array[3], (gltf) => {
@@ -388,7 +361,9 @@ gltfLoader.load(Url_Array[3], (gltf) => {
   table.position.set(-1.75, 0, -1.2);
   table.rotateY(THREE.MathUtils.degToRad(0));
   applyFlatColor(table, 0xf5d79e);
+  enableShadows(table);
   scene.add(table);
+  addMeshColliders(table, wallPhysicsMaterial);
 });
 gltfLoader.load(Url_Array[0], (gltf) => {
   const vase = gltf.scene;
@@ -397,14 +372,16 @@ gltfLoader.load(Url_Array[0], (gltf) => {
   vase.position.set(-1.75, 0.31, -1.2);
   vase.rotateY(THREE.MathUtils.degToRad(0));
 
+  enableShadows(vase);
   scene.add(vase);
+  addMeshColliders(vase, wallPhysicsMaterial);
 });
 //small details
 const bookColors = [0x8c3f39, 0x315b4a, 0xd4aa4c, 0x394b73];
 
 for (let i = 0; i < 12; i++) {
   const book = new THREE.Mesh(
-    new THREE.BoxGeometry(0.035, 0.12, 0.05),
+    new THREE.BoxGeometry(0.035, 0.12, 0.15),
     new THREE.MeshLambertMaterial({
       color: bookColors[i % bookColors.length],
     }),
@@ -415,7 +392,7 @@ for (let i = 0; i < 12; i++) {
 }
 for (let i = 0; i < 3; i++) {
   const book = new THREE.Mesh(
-    new THREE.BoxGeometry(0.035, 0.12, 0.05),
+    new THREE.BoxGeometry(0.035, 0.12, 0.15),
     new THREE.MeshLambertMaterial({
       color: bookColors[i % bookColors.length],
     }),
@@ -458,20 +435,191 @@ Fake_walls.add(
 scene.add(Fake_walls);
 //Helpfull things and render
 
-const axesHelper = new THREE.AxesHelper(2);
-scene.add(axesHelper);
+// const axesHelper = new THREE.AxesHelper(2);
+// scene.add(axesHelper);
 
 render.setSize(sizes.width, sizes.height);
 
 render.render(scene, camera);
+//Phics
 
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0);
+
+const playerRadius = 0.15;
+const cameraEyeHeight = 0.44;
+const playerMaterial = new CANNON.Material("player");
+const floorPhysicsMaterial = new CANNON.Material("physics-floor");
+const stairMaterial = new CANNON.Material("stairs");
+const wallPhysicsMaterial = new CANNON.Material("walls");
+
+const camera_box = new CANNON.Body({
+  mass: 2.5,
+  shape: new CANNON.Sphere(playerRadius),
+  material: playerMaterial,
+  position: new CANNON.Vec3(0, playerRadius + 0.01, 1.3),
+});
+camera_box.fixedRotation = true;
+camera_box.updateMassProperties();
+camera_box.linearDamping = 0.05;
+
+world.addBody(camera_box);
+
+const addFloorCollider = (width, depth, x, z) => {
+  const collider = new CANNON.Body({
+    mass: 0,
+    material: floorPhysicsMaterial,
+  });
+  collider.addShape(
+    new CANNON.Box(new CANNON.Vec3(width / 2, 0.06, depth / 2)),
+  );
+  collider.position.set(x, -0.04, z);
+  world.addBody(collider);
+};
+
+addFloorCollider(5.2, 2.3, 0, 1.025);
+addFloorCollider(1.05, 1.35, -1.975, -0.825);
+addFloorCollider(1.75, 1.35, 1.625, -0.825);
+
+const addMeshColliders = (root, material) => {
+  const roots = Array.isArray(root) ? root : [root];
+  roots.forEach((object) => object.updateWorldMatrix(true, true));
+
+  const colliderBody = new CANNON.Body({ mass: 0, material });
+  const bounds = new THREE.Box3();
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+
+  roots.forEach((rootObject) => {
+    rootObject.traverse((object) => {
+      if (!object.isMesh) return;
+
+      bounds.setFromObject(object);
+      bounds.getCenter(center);
+      bounds.getSize(size);
+
+      if (size.x === 0 || size.y === 0 || size.z === 0) return;
+
+      colliderBody.addShape(
+        new CANNON.Box(
+          new CANNON.Vec3(size.x / 2 + 0.075, size.y / 2, size.z / 2 + 0.075),
+        ),
+        new CANNON.Vec3(center.x, center.y, center.z),
+      );
+    });
+  });
+
+  if (colliderBody.shapes.length > 0) world.addBody(colliderBody);
+};
+
+addMeshColliders(room_1_fundament, wallPhysicsMaterial);
+addMeshColliders(Ladder_pillars, wallPhysicsMaterial);
+addMeshColliders(Fake_walls, wallPhysicsMaterial);
+addMeshColliders(
+  [basement_wall_kithen_sided, basment_wall_enterence_sided],
+  wallPhysicsMaterial,
+);
+
+basement_wall_under_ladder.updateWorldMatrix(true, false);
+const basementTriangleCollider = new CANNON.Body({
+  mass: 0,
+  material: wallPhysicsMaterial,
+});
+basementTriangleCollider.addShape(
+  new CANNON.ConvexPolyhedron(
+    [
+      new CANNON.Vec3(-2.25, -0.45, 0),
+      new CANNON.Vec3(1, -0.5, 0),
+      new CANNON.Vec3(0.9, 0.7, 0),
+      new CANNON.Vec3(-2.25, -0.45, 0.035),
+      new CANNON.Vec3(1, -0.5, 0.035),
+      new CANNON.Vec3(0.9, 0.7, 0.035),
+    ],
+    [
+      [0, 2, 1],
+      [3, 4, 5],
+      [0, 1, 4, 3],
+      [1, 2, 5, 4],
+      [2, 0, 3, 5],
+    ],
+  ),
+);
+const basementTrianglePosition = new THREE.Vector3();
+basement_wall_under_ladder.getWorldPosition(basementTrianglePosition);
+basementTriangleCollider.position.copy(basementTrianglePosition);
+world.addBody(basementTriangleCollider);
+
+const basementLedderCarpetCollider = new CANNON.Body({
+  mass: 0,
+  material: stairMaterial,
+});
+basementLedderCarpetCollider.addShape(
+  new CANNON.Box(new CANNON.Vec3(0.5, 0.055, 0.7)),
+);
+basementLedderCarpetCollider.position.set(-0.9, -0.6, -0.8);
+world.addBody(basementLedderCarpetCollider);
+
+const stairCollider = new CANNON.Body({ mass: 0, material: stairMaterial });
+const addStairTreads = (steps, startX, startY, z, isRotated) => {
+  const direction = isRotated ? -1 : 1;
+  const treadShape = new CANNON.Box(new CANNON.Vec3(0.0625, 0.025, 0.3325));
+
+  for (let i = 0; i < steps; i++) {
+    stairCollider.addShape(
+      treadShape,
+      new CANNON.Vec3(startX + i * 0.125 * direction, startY + i * 0.05, z),
+    );
+  }
+};
+
+addStairTreads(11, -0.56, -0.53, -1.15, false);
+addStairTreads(11, 0.85, -1.075, -0.455, true);
+world.addBody(stairCollider);
+
+const roofCollider = new CANNON.Body({
+  mass: 0,
+  material: wallPhysicsMaterial,
+});
+roofCollider.addShape(new CANNON.Box(new CANNON.Vec3(2.5, 0.125, 2)));
+roofCollider.position.set(0, 1.6, 0);
+world.addBody(roofCollider);
+
+world.addContactMaterial(
+  new CANNON.ContactMaterial(playerMaterial, floorPhysicsMaterial, {
+    friction: 0,
+    restitution: 0,
+  }),
+);
+world.addContactMaterial(
+  new CANNON.ContactMaterial(playerMaterial, stairMaterial, {
+    friction: 0.05,
+    restitution: 0.2,
+  }),
+);
+world.addContactMaterial(
+  new CANNON.ContactMaterial(playerMaterial, wallPhysicsMaterial, {
+    friction: 0,
+    restitution: 0,
+  }),
+);
+
+const controls = createWalkControls(camera, canvas, camera_box, playerRadius);
 //Timer
 const timer = new THREE.Timer();
 
 const tick = () => {
   timer.update();
+  const deltaTime = timer.getDelta();
   controls.update();
+  world.step(1 / 60, deltaTime, 3);
 
+  camera.position.set(
+    camera_box.position.x,
+    camera_box.position.y + cameraEyeHeight,
+    camera_box.position.z,
+  );
+
+  // console.log(camera.position.y);
   render.render(scene, camera);
 
   window.requestAnimationFrame(tick);
