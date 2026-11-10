@@ -34,9 +34,7 @@ export const CreateText_func = (x, y, z, text_data, scene) => {
 };
 export const CreateSentenses_func = (x, y, z, text_data, scene) => {
   const sentense = text_data.split("|");
-  console.log(sentense);
   for (let i = 0; i < sentense.length; i++) {
-    console.log(x, y - 0.1 * i, z, sentense[i]);
     CreateText_func(x, y - 0.1 * i, z, sentense[i], scene);
   }
 };

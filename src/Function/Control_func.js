@@ -65,7 +65,6 @@ export function createWalkControls(
     pressedKeys.delete(event.code);
   });
   document.addEventListener("mousewheel", (event) => {
-    console.log(heartRange);
     if (event.deltaY < 0) {
       heartRange += 0.01;
     } else {

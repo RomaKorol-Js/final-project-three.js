@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import CANNON from "cannon";
-import { Pillars_ladder } from "./Classes/Ladder_pillar_class";
 import { Frame } from "./Classes/Frame_class";
 import { Add_Ladders } from "./Function/AddLeaders_func";
 import { createWalkControls } from "./Function/Control_func";
@@ -8,10 +7,12 @@ import { Ladder_basement_carpeted_floor } from "./Classes/Ladder_basement_carpet
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { HeartGeometry } from "./Geometrys/Heart_geometry";
 import { HeartMaterial } from "./Shaders/HeartMaterial";
-import {
-  CreateSentenses_func,
-  CreateTextWithBackground_func,
-} from "./Function/CreateSentenses_func";
+import { CreateTextWithBackground_func } from "./Function/CreateText_func";
+import { Ladder_pillars_creator_func } from "./Function/Ladder_pillars_creator_func";
+import { addFloorCollider } from "./Function/addFloorCollider";
+import { addMeshColliders } from "./Function/AddMeshColliders";
+import { addStairTreads } from "./Function/addStairTreads";
+import { addBorder } from "./Function/addBorder";
 
 const scene = new THREE.Scene();
 
@@ -26,7 +27,6 @@ export const camera = new THREE.PerspectiveCamera(
 );
 
 camera.position.set(0, 0.95, 1.3);
-// camera.lookAt(0, 0, 0);
 
 scene.add(camera);
 
@@ -150,28 +150,9 @@ room_1_fundament.add(
   roof,
 );
 
-function addBorder(mesh, borderColor) {
-  // add to function
-  const edges = new THREE.EdgesGeometry(mesh.geometry);
-  const borderMaterial = new THREE.LineBasicMaterial({ color: borderColor });
-  const borderLines = new THREE.LineSegments(edges, borderMaterial);
-  mesh.add(borderLines);
-}
 scene.add(room_1_fundament);
-//Decoration (Must add painting and lenter that must have light)
+//Decoration
 const Decoration = new THREE.Group();
-
-// const coridor_sided_box = new THREE.Mesh(
-//   new THREE.BoxGeometry(0.5, 0.25, 0.25),
-//   new THREE.MeshBasicMaterial({ color: 0xf5d79e }),
-// );
-// coridor_sided_box.position.set(1.7, 0.15, -1.35);
-
-// const kithen_sided_box_with_plant = new THREE.Mesh(
-//   new THREE.BoxGeometry(0.3, 0.3, 0.4),
-//   new THREE.MeshBasicMaterial({ color: 0x513001 }),
-// );
-// kithen_sided_box_with_plant.position.set(-1.75, 0.15, -1.2);
 
 const small_frame = new Frame(0xc2854e, 0xf3eac6, 0.3, 0.4, 0.05);
 small_frame.position.set(1.4, 0.75, -1.5);
@@ -179,12 +160,7 @@ small_frame.position.set(1.4, 0.75, -1.5);
 const wide_frame = new Frame(0xc2854e, 0xf3eac6, 1.5, 0.5, 0.05, 1.05, 1.2);
 wide_frame.position.set(-0.25, 0.75, -1.5);
 
-Decoration.add(
-  // coridor_sided_box,
-  // kithen_sided_box_with_plant,
-  small_frame,
-  wide_frame,
-);
+Decoration.add(small_frame, wide_frame);
 
 Decoration.children.forEach((decoration) => {
   addBorder(decoration, 0xc2854e);
@@ -193,35 +169,9 @@ scene.add(Decoration);
 
 //Ladder
 const Ladder_pillars = new THREE.Group();
-// I can make function that will make it, so it wont be too much of reapeated code
-for (let i = 0; i < 11; i++) {
-  const x = -1.35 + i * 0.2;
-  const y = 0.25;
-  const z = -0.025;
-  const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
-  pillar.position.set(x, y, z);
-  Ladder_pillars.add(pillar);
-}
-
-for (let i = 0; i < 9; i++) {
-  const x = -1.5;
-  const y = 0.25;
-  const z = -1.35 + i * 0.145;
-  const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
-  pillar.rotateY(133.5);
-  pillar.position.set(x, y, z);
-  Ladder_pillars.add(pillar);
-}
-
-for (let i = 0; i < 4; i++) {
-  const x = 0.8;
-  const y = 0.25;
-  const z = -0.65 + i * 0.145;
-  const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
-  pillar.rotateY(133.5);
-  pillar.position.set(x, y, z);
-  Ladder_pillars.add(pillar);
-}
+Ladder_pillars_creator_func(11, -1.35, 0.25, -0.025, 0.2, 0, 0, Ladder_pillars);
+Ladder_pillars_creator_func(9, -1.5, 0.25, -1.35, 0, 0, 0.145, Ladder_pillars);
+Ladder_pillars_creator_func(4, 0.8, 0.25, -0.65, 0, 0, 0.145, Ladder_pillars);
 scene.add(Ladder_pillars);
 
 //stepladders
@@ -457,13 +407,13 @@ render.setSize(sizes.width, sizes.height);
 render.render(scene, camera);
 //Phics
 
-const world = new CANNON.World();
+export const world = new CANNON.World();
 world.gravity.set(0, -9.82, 0);
 
 const playerRadius = 0.15;
 const cameraEyeHeight = 0.44;
 const playerMaterial = new CANNON.Material("player");
-const floorPhysicsMaterial = new CANNON.Material("physics-floor");
+export const floorPhysicsMaterial = new CANNON.Material("physics-floor");
 const stairMaterial = new CANNON.Material("stairs");
 const wallPhysicsMaterial = new CANNON.Material("walls");
 
@@ -479,52 +429,9 @@ camera_box.linearDamping = 0.05;
 
 world.addBody(camera_box);
 
-const addFloorCollider = (width, depth, x, z) => {
-  const collider = new CANNON.Body({
-    mass: 0,
-    material: floorPhysicsMaterial,
-  });
-  collider.addShape(
-    new CANNON.Box(new CANNON.Vec3(width / 2, 0.06, depth / 2)),
-  );
-  collider.position.set(x, -0.04, z);
-  world.addBody(collider);
-};
-
 addFloorCollider(5.2, 2.3, 0, 1.025);
 addFloorCollider(1.05, 1.35, -1.975, -0.825);
 addFloorCollider(1.75, 1.35, 1.625, -0.825);
-
-const addMeshColliders = (root, material) => {
-  const roots = Array.isArray(root) ? root : [root];
-  roots.forEach((object) => object.updateWorldMatrix(true, true));
-
-  const colliderBody = new CANNON.Body({ mass: 0, material });
-  const bounds = new THREE.Box3();
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-
-  roots.forEach((rootObject) => {
-    rootObject.traverse((object) => {
-      if (!object.isMesh) return;
-
-      bounds.setFromObject(object);
-      bounds.getCenter(center);
-      bounds.getSize(size);
-
-      if (size.x === 0 || size.y === 0 || size.z === 0) return;
-
-      colliderBody.addShape(
-        new CANNON.Box(
-          new CANNON.Vec3(size.x / 2 + 0.075, size.y / 2, size.z / 2 + 0.075),
-        ),
-        new CANNON.Vec3(center.x, center.y, center.z),
-      );
-    });
-  });
-
-  if (colliderBody.shapes.length > 0) world.addBody(colliderBody);
-};
 
 addMeshColliders(room_1_fundament, wallPhysicsMaterial);
 addMeshColliders(Ladder_pillars, wallPhysicsMaterial);
@@ -574,20 +481,9 @@ basementLedderCarpetCollider.position.set(-0.9, -0.6, -0.8);
 world.addBody(basementLedderCarpetCollider);
 
 const stairCollider = new CANNON.Body({ mass: 0, material: stairMaterial });
-const addStairTreads = (steps, startX, startY, z, isRotated) => {
-  const direction = isRotated ? -1 : 1;
-  const treadShape = new CANNON.Box(new CANNON.Vec3(0.0625, 0.025, 0.3325));
 
-  for (let i = 0; i < steps; i++) {
-    stairCollider.addShape(
-      treadShape,
-      new CANNON.Vec3(startX + i * 0.125 * direction, startY + i * 0.05, z),
-    );
-  }
-};
-
-addStairTreads(11, -0.56, -0.53, -1.15, false);
-addStairTreads(11, 0.85, -1.075, -0.455, true);
+addStairTreads(11, -0.56, -0.53, -1.15, false, stairCollider);
+addStairTreads(11, 0.85, -1.075, -0.455, true, stairCollider);
 world.addBody(stairCollider);
 
 const roofCollider = new CANNON.Body({
@@ -667,5 +563,3 @@ const tick = () => {
 };
 
 tick();
-
-//relocate function in seperate folder
