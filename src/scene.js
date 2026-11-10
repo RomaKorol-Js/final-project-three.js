@@ -6,6 +6,12 @@ import { Add_Ladders } from "./Function/AddLeaders_func";
 import { createWalkControls } from "./Function/Control_func";
 import { Ladder_basement_carpeted_floor } from "./Classes/Ladder_basement_carpeted_floor";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { HeartGeometry } from "./Geometrys/Heart_geometry";
+import { HeartMaterial } from "./Shaders/HeartMaterial";
+import {
+  CreateSentenses_func,
+  CreateTextWithBackground_func,
+} from "./Function/CreateSentenses_func";
 
 const scene = new THREE.Scene();
 
@@ -611,56 +617,34 @@ world.addContactMaterial(
   }),
 );
 
-const controls = createWalkControls(camera, canvas, camera_box, playerRadius);
+// work With Shader
 
-//Shader
-const HeartMaterial = new THREE.ShaderMaterial({
-  uniforms: {
-    fluidData: { value: 0.0 },
-    Clour_Data: { value: new THREE.Vector3(0, 0, 0) },
-  },
-  vertexShader: `
-  void main(){
-  vec3 newPosition = position;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1);
-  }
-  `,
+const player_heart = new THREE.Mesh(HeartGeometry, HeartMaterial);
+HeartMaterial.uniforms.Colour_Data.value.set(1, 0, 1);
+player_heart.scale.setScalar(0.25);
+player_heart.visible = false;
+scene.add(player_heart);
 
-  fragmentShader: `
-  uniform float fluidData; 
-  uniform vec3 Clour_Data; 
-  void main(){
-  float pulse = 0.9 + 0.075 * sin(fluidData * 3.0);
-  
-  vec3 finalColor = Clour_Data * pulse;
-  gl_FragColor = vec4(finalColor, 1.0);
-  }
-  `,
-});
-const shape = new THREE.Shape();
-
-shape.moveTo(0, 0.25);
-shape.bezierCurveTo(0, 0.25, -0.5, 0.65, -0.5, 0.1);
-shape.bezierCurveTo(-0.5, -0.2, 0, -0.45, 0, -0.45);
-shape.bezierCurveTo(0, -0.45, 0.5, -0.2, 0.5, 0.1);
-shape.bezierCurveTo(0.5, 0.65, 0, 0.25, 0, 0.25);
-const geometry = new THREE.ExtrudeGeometry(shape, {
-  depth: 0.08,
-  bevelEnabled: true,
-});
-const heart = new THREE.Mesh(geometry, HeartMaterial);
-// patience 0 1 1
-// integraty 0 0 1
-// Kindness 0 1 0
-// Determination 1 0 0
-// Justice 1 1 0
-// Persistance 1 0 1
-// Bravery 1 0.5 0
-HeartMaterial.uniforms.Clour_Data.value.set(1, 0, 1);
-
-heart.position.y = 0.5;
-heart.scale.setScalar(0.3);
-scene.add(heart);
+//Text
+const TextGroup = new THREE.Group();
+CreateTextWithBackground_func(
+  -0.9,
+  1,
+  0,
+  "Press WSDA to Move|Press Q to Move slower|Press SPACE to jump|Press H to spawn a heart|Press C to change colour of your heart|Use scroll well to move your heart",
+  TextGroup,
+);
+scene.add(TextGroup);
+TextGroup.visible = true;
+// Control
+const controls = createWalkControls(
+  camera,
+  canvas,
+  camera_box,
+  playerRadius,
+  player_heart,
+  TextGroup,
+);
 
 //Timer
 const timer = new THREE.Timer();
@@ -683,3 +667,5 @@ const tick = () => {
 };
 
 tick();
+
+//relocate function in seperate folder
