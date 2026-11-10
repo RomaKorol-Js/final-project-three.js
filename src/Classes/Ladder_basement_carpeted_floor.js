@@ -8,18 +8,22 @@ export class Ladder_basement_carpeted_floor extends THREE.Group {
     const Ladder_basement_carpeted_floor_outside_material =
       new THREE.MeshLambertMaterial({
         color: basement_carpeted_floor_outside,
+        emissive: basement_carpeted_floor_outside,
+        emissiveIntensity: 0.45,
       });
     const Ladder_basement_carpeted_floor_inside_material =
       new THREE.MeshLambertMaterial({
         color: basement_carpeted_floor_inside,
+        emissive: basement_carpeted_floor_inside,
+        emissiveIntensity: 0.45,
       });
 
     const Ladder_basement_carpeted_floor_outside = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 0.1, 1.4),
+      new THREE.BoxGeometry(0.96, 0.1, 1.4),
       Ladder_basement_carpeted_floor_outside_material,
     );
     const Ladder_basement_carpeted_floor_inside = new THREE.Mesh(
-      new RoundedBoxGeometry(0.95, 0.11, 1.25, 4, 0.2),
+      new RoundedBoxGeometry(0.9, 0.11, 1.25, 4, 0.2),
       Ladder_basement_carpeted_floor_inside_material,
     );
     const Ladder_basement_carpeted_floor_inside_hole = new THREE.Mesh(

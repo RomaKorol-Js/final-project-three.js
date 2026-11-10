@@ -55,10 +55,10 @@ floorShape.lineTo(-2.5, 2);
 floorShape.closePath();
 
 const floorHole = new THREE.Path();
-floorHole.moveTo(-1.45, 0.15);
+floorHole.moveTo(-1.45, 0.1);
 floorHole.lineTo(-1.45, 1.5);
 floorHole.lineTo(0.75, 1.5);
-floorHole.lineTo(0.75, 0.15);
+floorHole.lineTo(0.75, 0.1);
 
 floorShape.holes.push(floorHole);
 
@@ -191,7 +191,7 @@ const Ladder_pillars = new THREE.Group();
 for (let i = 0; i < 11; i++) {
   const x = -1.35 + i * 0.2;
   const y = 0.25;
-  const z = -0.1;
+  const z = -0.025;
   const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
   pillar.position.set(x, y, z);
   Ladder_pillars.add(pillar);
@@ -200,7 +200,7 @@ for (let i = 0; i < 11; i++) {
 for (let i = 0; i < 9; i++) {
   const x = -1.5;
   const y = 0.25;
-  const z = -1.4 + i * 0.145;
+  const z = -1.35 + i * 0.145;
   const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
   pillar.rotateY(133.5);
   pillar.position.set(x, y, z);
@@ -210,7 +210,7 @@ for (let i = 0; i < 9; i++) {
 for (let i = 0; i < 4; i++) {
   const x = 0.8;
   const y = 0.25;
-  const z = -0.7 + i * 0.145;
+  const z = -0.65 + i * 0.145;
   const pillar = new Pillars_ladder(0xc2854e, 0xf3eac6);
   pillar.rotateY(133.5);
   pillar.position.set(x, y, z);
@@ -221,7 +221,9 @@ scene.add(Ladder_pillars);
 //stepladders
 
 const Ladder_steps = Add_Ladders(11, -0.56, -0.53, -1.15, false);
-const Ladder_steps_bottom = Add_Ladders(11, 0.85, -1.075, -0.455, true);
+const Ladder_steps_bottom = Add_Ladders(11, 0.775, -1.07, -0.455, true);
+
+Ladder_pillars.add(Ladder_steps, Ladder_steps_bottom);
 scene.add(Ladder_steps, Ladder_steps_bottom);
 
 //basement
@@ -229,7 +231,7 @@ const Basment_fundament = new THREE.Group();
 
 const wallShape = new THREE.Shape();
 wallShape.moveTo(-2.25, -0.45); // left
-wallShape.lineTo(1.0, -0.5); // right
+wallShape.lineTo(1.5, -0.6); // right
 wallShape.lineTo(0.9, 0.7); //upper
 wallShape.closePath();
 
@@ -248,7 +250,7 @@ const Basement_ladder_carpeted_floor = new Ladder_basement_carpeted_floor(
   0xf3eac6,
   0xc2854e,
 );
-Basement_ladder_carpeted_floor.position.set(-0.9, -0.6, -0.8);
+Basement_ladder_carpeted_floor.position.set(-0.95, -0.6, -0.8);
 
 /*easier one */
 
@@ -293,6 +295,15 @@ Basment_fundament.traverse((object) => {
   if (!object.isMesh) return;
   enableShadows(object);
 });
+Basment_fundament.traverse((object) => {
+  if (!object.isMesh) return;
+  enableShadows(object);
+});
+Ladder_pillars.traverse((object) => {
+  if (!object.isMesh) return;
+  enableShadows(object);
+});
+
 //3d modules
 const Base_Url = `${import.meta.env.BASE_URL}`;
 
@@ -422,10 +433,10 @@ const Fake_wall_enterence = new THREE.Mesh(
 Fake_wall_enterence.position.set(0, 0.75, 1.88);
 
 const Fake_wall_basement = new THREE.Mesh(
-  new THREE.BoxGeometry(0.25, 1, 0.75),
+  new THREE.BoxGeometry(0.25, 1.1, 0.75),
   new THREE.MeshBasicMaterial({ color: 0x000000 }),
 );
-Fake_wall_basement.position.set(1, -0.55, -0.45);
+Fake_wall_basement.position.set(1, -0.6, -0.45);
 Fake_walls.add(
   Fake_wall_kithen,
   Fake_wall_corridor,
@@ -434,9 +445,6 @@ Fake_walls.add(
 );
 scene.add(Fake_walls);
 //Helpfull things and render
-
-// const axesHelper = new THREE.AxesHelper(2);
-// scene.add(axesHelper);
 
 render.setSize(sizes.width, sizes.height);
 
@@ -604,6 +612,56 @@ world.addContactMaterial(
 );
 
 const controls = createWalkControls(camera, canvas, camera_box, playerRadius);
+
+//Shader
+const HeartMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    fluidData: { value: 0.0 },
+    Clour_Data: { value: new THREE.Vector3(0, 0, 0) },
+  },
+  vertexShader: `
+  void main(){
+  vec3 newPosition = position;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1);
+  }
+  `,
+
+  fragmentShader: `
+  uniform float fluidData; 
+  uniform vec3 Clour_Data; 
+  void main(){
+  float pulse = 0.9 + 0.075 * sin(fluidData * 3.0);
+  
+  vec3 finalColor = Clour_Data * pulse;
+  gl_FragColor = vec4(finalColor, 1.0);
+  }
+  `,
+});
+const shape = new THREE.Shape();
+
+shape.moveTo(0, 0.25);
+shape.bezierCurveTo(0, 0.25, -0.5, 0.65, -0.5, 0.1);
+shape.bezierCurveTo(-0.5, -0.2, 0, -0.45, 0, -0.45);
+shape.bezierCurveTo(0, -0.45, 0.5, -0.2, 0.5, 0.1);
+shape.bezierCurveTo(0.5, 0.65, 0, 0.25, 0, 0.25);
+const geometry = new THREE.ExtrudeGeometry(shape, {
+  depth: 0.08,
+  bevelEnabled: true,
+});
+const heart = new THREE.Mesh(geometry, HeartMaterial);
+// patience 0 1 1
+// integraty 0 0 1
+// Kindness 0 1 0
+// Determination 1 0 0
+// Justice 1 1 0
+// Persistance 1 0 1
+// Bravery 1 0.5 0
+HeartMaterial.uniforms.Clour_Data.value.set(1, 0, 1);
+
+heart.position.y = 0.5;
+heart.scale.setScalar(0.3);
+scene.add(heart);
+
 //Timer
 const timer = new THREE.Timer();
 
@@ -613,13 +671,12 @@ const tick = () => {
   controls.update();
   world.step(1 / 60, deltaTime, 3);
 
+  HeartMaterial.uniforms.fluidData.value = timer.getElapsed();
   camera.position.set(
     camera_box.position.x,
     camera_box.position.y + cameraEyeHeight,
     camera_box.position.z,
   );
-
-  // console.log(camera.position.y);
   render.render(scene, camera);
 
   window.requestAnimationFrame(tick);
